@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="SkillPath logo">
+  <rect width="512" height="512" fill="#ffffff"/>
+  <g fill="#111111">
+    <path d="M270 92c-62 0-112 50-112 112v104c0 62 50 112 112 112h90c62 0 112-50 112-112V204c0-62-50-112-112-112h-90zm0 60h90c29 0 52 23 52 52v104c0 29-23 52-52 52h-90c-29 0-52-23-52-52V204c0-29 23-52 52-52z"/>
+    <path d="M92 238c0-18 14-32 32-32h40v60h-40c-18 0-32-14-32-28z" opacity=".9"/>
+    <path d="M92 302c0-16 14-30 32-30h40v60h-40c-18 0-32-14-32-30z" opacity=".75"/>
+  </g>
+  <text x="76" y="420" font-family="system-ui, -apple-system, Segoe UI, Roboto, Arial" font-size="54" font-weight="700" fill="#111111">SkillPath</text>
+</svg>
