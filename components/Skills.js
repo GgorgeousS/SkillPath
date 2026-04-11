@@ -218,7 +218,7 @@
                     <p class="small">Список навыков</p>
                   </div>
 
-                  <div class="list" role="group" aria-label="Навыки">
+                  <div class="list skill-list" role="group" aria-label="Навыки">
                     <label v-for="s in skillsForDirection" :key="s.key" class="list-item">
                       <span class="title">{{ s.label }}</span>
                       <span class="levels" role="radiogroup" :aria-label="'Уровень: ' + s.label">
