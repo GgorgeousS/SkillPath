@@ -14,10 +14,11 @@
   --accentB:#4DA3FF;
 }
 *{box-sizing:border-box}
-html,body{height:100%}
+html,body{min-height:100%}
 body{
   margin:0;
   font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+  min-height:100vh;
   background:
     radial-gradient(900px 520px at 15% 0%, rgba(108,92,231,.22), transparent 55%),
     radial-gradient(900px 520px at 85% 10%, rgba(77,163,255,.18), transparent 55%),
@@ -27,7 +28,7 @@ body{
 a{color:var(--text)}
 a:hover{color:var(--accent)}
 
-.page{min-height:100%;display:flex;justify-content:center;padding:28px 16px}
+.page{min-height:100vh;display:flex;justify-content:center;padding:28px 16px}
 
 /* Desktop: full page width; Mobile: tighter like phone */
 .shell{width:100%;max-width:1100px}
@@ -354,6 +355,201 @@ input[type="radio"]{
 }
 
 .loading{padding:40px;text-align:center;color:var(--muted)}
+
+/* Plan placeholder (wireframe-like block) */
+.plan-box{
+  border:1px solid var(--border);
+  background:rgba(0,0,0,.04);
+  border-radius:16px;
+  padding:14px;
+  color:var(--text);
+  min-height:180px;
+}
+
+/* Large blocks on Progress screen */
+.card-link{
+  appearance:none;
+  width:100%;
+  text-align:left;
+  border:0;
+  background:transparent;
+  padding:0;
+  cursor:pointer;
+  margin-top:12px;
+}
+.card-link--static{
+  cursor:default;
+}
+.card-link__title{
+  font-size:13px;
+  color:var(--muted);
+  margin:0 0 8px 2px;
+}
+.card-link__titleRow{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin:0 0 8px 2px;
+}
+.card-link__titleRow .card-link__title{margin:0}
+.card-link__toggle{
+  border:1px solid var(--border);
+  background:var(--chip);
+  color:var(--muted);
+  width:28px;
+  height:28px;
+  border-radius:10px;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  line-height:1;
+}
+.card-link__toggle:hover{filter:brightness(0.98)}
+.card-link__box{
+  border:1px solid var(--border);
+  background:rgba(0,0,0,.04);
+  border-radius:16px;
+  padding:14px;
+  min-height:120px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:var(--muted);
+  font-weight:600;
+  white-space:pre-wrap;
+}
+.card-link__box--stack{
+  display:block;
+  color:var(--text);
+  font-weight:400;
+}
+.card-link__box--stack .note{margin:0}
+
+.plan-days{
+  margin:0;
+  padding-left:18px;
+  color:var(--text);
+  font-size:13px;
+  line-height:1.35;
+}
+.plan-days li{margin:6px 0}
+.card-link:hover .card-link__box{filter:brightness(0.98)}
+
+/* Plan (30 days / weeks / checklists) */
+.plan-md__title{font-size:14px;color:var(--text);margin-bottom:10px}
+.plan-md__section{margin-top:10px}
+.plan-md__h{font-size:13px;color:var(--muted);margin:0 0 6px}
+.plan-md__week{margin-top:14px;font-size:13px;color:var(--text)}
+.plan-md__day{margin-top:10px;padding:10px;border:1px solid var(--border);border-radius:12px;background:#fff}
+.plan-md__dayTitle{font-size:13px;margin:0 0 8px;color:var(--text)}
+.task-list{list-style:none;margin:0;padding:0;color:var(--text);font-size:13px;line-height:1.35}
+.task-list li{display:flex;gap:8px;align-items:flex-start;margin:6px 0}
+.task-checkbox{margin-top:2px;flex:0 0 auto;accent-color:var(--accentA)}
+.task-text{flex:1 1 auto}
+
+/* Progress bar */
+.progress-wrap{display:flex;flex-direction:column;gap:10px}
+.progress-meta{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.progress-bar{
+  width:100%;
+  height:14px;
+  border-radius:999px;
+  border:1px solid var(--border);
+  background:rgba(0,0,0,.04);
+  overflow:hidden;
+}
+.progress-bar__fill{
+  height:100%;
+  background:linear-gradient(135deg, rgba(108,92,231,1), rgba(77,163,255,1));
+  border-radius:999px;
+}
+
+/* Chat */
+.chat{display:flex;flex-direction:column;gap:10px}
+.chat-bubble{
+  max-width:92%;
+  padding:10px 12px;
+  border-radius:14px;
+  border:1px solid var(--border);
+  background:var(--chip);
+  color:var(--text);
+  line-height:1.25;
+}
+.chat-bubble--assistant{align-self:flex-start}
+.chat-bubble--user{align-self:flex-end;background:#fff}
+.chat-input{display:flex;gap:10px;align-items:center}
+.chat-input .btn{padding:12px 14px}
+
+/* Bottom menu + centered round AI button (mock) */
+.bottom-menu{
+  position:relative;
+  height:64px;
+  display:flex;
+  align-items:flex-end;
+  justify-content:flex-start;
+  padding:0 6px;
+}
+.bottom-menu-label{
+  font-size:13px;
+  color:var(--muted);
+  padding:10px 6px;
+}
+.ai-fab{
+  width:56px;
+  height:56px;
+  border-radius:999px;
+  border:1px solid var(--border);
+  background:var(--btn);
+  color:var(--btnText);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:800;
+  letter-spacing:.2px;
+  position:absolute;
+  left:50%;
+  bottom:0;
+  transform:translateX(-50%);
+}
+.ai-fab:hover{filter:brightness(0.95)}
+
+/* Skill graph (SVG) */
+.skill-graph{
+  border:1px solid var(--border);
+  background:rgba(255,255,255,.55);
+  border-radius:16px;
+  padding:10px;
+  overflow:hidden;
+}
+.skill-graph__svg{width:100%;height:auto;display:block}
+.skill-graph__edge{
+  stroke:rgba(0,0,0,.28);
+  stroke-width:2;
+}
+.skill-graph__arrow{fill:rgba(0,0,0,.28)}
+.skill-graph__node{
+  fill:rgba(255,255,255,.92);
+  stroke:rgba(0,0,0,.16);
+  stroke-width:1.5;
+}
+.skill-graph__node.is-yes{
+  stroke:rgba(108,92,231,.55);
+  stroke-width:2.5;
+}
+.skill-graph__node.is-mid{
+  stroke:rgba(77,163,255,.55);
+  stroke-width:2.5;
+}
+.skill-graph__node.is-no{
+  stroke-dasharray:4 4;
+}
+.skill-graph__label{
+  font-size:12px;
+  fill:var(--text);
+  font-weight:700;
+}
 
 .error{
   border-color:rgba(255, 99, 99, .35);

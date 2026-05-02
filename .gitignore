@@ -1,0 +1,14 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+
+# Env files
+.env
+crm_api/.env
+
+# CRM local DB
+crm_api/*.db
+
+# Node
+node_modules/

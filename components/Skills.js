@@ -63,15 +63,24 @@
   };
 
   const LEVELS = [
-    { value: 'no', label: 'Нет' },
-    { value: 'mid', label: 'Средне' },
-    { value: 'yes', label: 'Да' },
+    { value: 'yes', label: 'Отлично знаю' },
+    { value: 'mid', label: 'Имею уверенную базу' },
+    { value: 'no', label: 'Не знаю' },
   ];
 
   window.SkillPathComponents.Skills = {
     name: 'Skills',
     setup() {
       const state = SkillPathStore.state;
+      const router = VueRouter.useRouter();
+
+      const crmConfigured = Vue.computed(() => SkillPathCRM.isConfigured());
+      const crmHelp = Vue.computed(() => {
+        if (crmConfigured.value) return '';
+        return typeof SkillPathCRM.getConfigHelp === 'function'
+          ? SkillPathCRM.getConfigHelp()
+          : 'CRM не настроен: откройте js/crm.js и укажите CRM_API_BASE_URL и CRM_API_KEY.';
+      });
 
       const supabaseConfigured = Vue.computed(() => SkillPathSupabase.isConfigured());
       const supabaseHelp = Vue.computed(() => {
@@ -142,6 +151,42 @@
         };
       }
 
+      function assessmentResult() {
+        const skillsList = skillsForDirection.value;
+        const strengths = skillsList
+          .filter((s) => state.skills[s.key] === 'yes')
+          .map((s) => s.label);
+        const gaps = skillsList
+          .filter((s) => state.skills[s.key] === 'no')
+          .map((s) => s.label);
+        return (
+          'Direction: ' +
+          (selectedDirection.value || '-') +
+          '\nStrengths: ' +
+          (strengths.length ? strengths.join(', ') : '-') +
+          '\nGaps: ' +
+          (gaps.length ? gaps.join(', ') : '-')
+        );
+      }
+
+      function crmPayload() {
+        const sup = payload();
+        return {
+          name: (state.profile.name || '').trim(),
+          last_name: (state.profile.last_name || '').trim(),
+          phone: (state.profile.phone || '').trim(),
+          email: (state.profile.email || '').trim(),
+
+          persona_type: state.profile.persona_type,
+          interests: (sup.answers && sup.answers.interests) || [],
+          skills: sup.skills,
+          recommended_directions: sup.recommended_directions,
+          assessment_result: assessmentResult(),
+          source: 'SkillPath Form',
+          created_at: new Date().toISOString(),
+        };
+      }
+
       async function submit() {
         status.value = { type: 'idle', message: '' };
 
@@ -153,28 +198,53 @@
           return;
         }
 
+        if (!crmConfigured.value) {
+          status.value = {
+            type: 'error',
+            message: crmHelp.value || 'CRM не настроен (см. js/crm.js).',
+          };
+          return;
+        }
+
         isSubmitting.value = true;
         try {
-          const { data, error } = await SkillPathSupabase.insertSubmission(payload());
-          if (error) {
+          const p = payload();
+
+          const crmRes = await SkillPathCRM.createLead(crmPayload());
+          if (crmRes && crmRes.error) {
             status.value = {
               type: 'error',
-              message: 'Ошибка Supabase: ' + (error.message || String(error)),
+              message: 'Ошибка CRM: ' + (crmRes.error.message || String(crmRes.error)),
             };
             return;
           }
 
-          const insertedId = Array.isArray(data) && data[0] && data[0].id ? data[0].id : null;
+          let supabaseNote = '';
+          if (supabaseConfigured.value) {
+            const { data, error } = await SkillPathSupabase.insertSubmission(p);
+            if (error) {
+              supabaseNote = ' Supabase: ошибка (' + (error.message || String(error)) + ')';
+            } else {
+              const insertedId = Array.isArray(data) && data[0] && data[0].id ? data[0].id : null;
+              supabaseNote = insertedId ? (' Supabase ID: ' + insertedId) : ' Supabase: ok';
+            }
+          } else {
+            supabaseNote = ' Supabase: не настроен';
+          }
+
           status.value = {
             type: 'success',
-            message:
-              'Отправлено в Supabase.' + (insertedId ? (' ID записи: ' + insertedId) : ''),
+            message: 'Отправлено в CRM.' + supabaseNote,
           };
         } catch (e) {
           status.value = { type: 'error', message: e.message || String(e) };
         } finally {
           isSubmitting.value = false;
         }
+      }
+
+      function next() {
+        router.push('/roadmap');
       }
 
       return {
@@ -185,8 +255,11 @@
         isSubmitting,
         canSubmit,
         submit,
+        next,
         supabaseConfigured,
         supabaseHelp,
+        crmConfigured,
+        crmHelp,
         primaryDirectionTitle,
         skillsHeroSrc,
       };
@@ -247,6 +320,14 @@
                     <input class="input" type="text" v-model="state.profile.name" placeholder="Ваше имя" />
                   </div>
                   <div class="field">
+                    <div class="label">Фамилия</div>
+                    <input class="input" type="text" v-model="state.profile.last_name" placeholder="Ваша фамилия" />
+                  </div>
+                  <div class="field">
+                    <div class="label">Телефон</div>
+                    <input class="input" type="tel" v-model="state.profile.phone" placeholder="+7…" />
+                  </div>
+                  <div class="field">
                     <div class="label">Persona type</div>
                     <select class="select" v-model="state.profile.persona_type">
                       <option value="student">student</option>
@@ -264,6 +345,10 @@
                     {{ status.message }}
                   </div>
 
+                  <div class="note" v-if="!crmConfigured">
+                    {{ crmHelp || 'CRM не настроен: откройте js/crm.js и укажите CRM_API_BASE_URL и CRM_API_KEY.' }}
+                  </div>
+
                   <div class="note" v-if="!supabaseConfigured">
                     {{ supabaseHelp || 'Supabase не настроен: откройте js/supabase.js и вставьте URL и anon key.' }}
                   </div>
@@ -272,9 +357,12 @@
             </div>
 
             <div class="sticky-footer">
-              <button class="btn btn-primary" :disabled="!canSubmit || isSubmitting" @click="submit">
-                {{ isSubmitting ? 'Отправка…' : 'Отправить' }}
-              </button>
+              <div class="actions" style="margin:0">
+                <button class="btn btn-primary" type="button" @click="next">Далее</button>
+                <button class="btn" :disabled="!canSubmit || isSubmitting" @click="submit">
+                  {{ isSubmitting ? 'Отправка…' : 'Отправить' }}
+                </button>
+              </div>
             </div>
           </div>
         </div>

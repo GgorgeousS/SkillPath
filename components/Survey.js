@@ -66,7 +66,7 @@
                 />
               </div>
             </div>
-            <p class="subtitle">Отметьте, что вам знакомо или интересно</p>
+            <p class="subtitle">Опрос по интересам — выберите всё, что вам интересно</p>
 
             <div class="content compact">
               <div class="list" role="group" aria-label="Навыки и темы">

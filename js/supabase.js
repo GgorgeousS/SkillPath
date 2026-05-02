@@ -70,16 +70,25 @@
     const url = String(SUPABASE_URL || '').trim().replace(/\/$/, '');
     const key = String(SUPABASE_ANON_KEY || '').trim();
 
-    const res = await fetch(url + '/rest/v1/submissions', {
-      method: 'POST',
-      headers: {
-        apikey: key,
-        Accept: 'application/json',
-        'Content-Type': 'application/json',
-        Prefer: 'return=minimal',
-      },
-      body: JSON.stringify(payload),
-    });
+    let res;
+    try {
+      res = await fetch(url + '/rest/v1/submissions', {
+        method: 'POST',
+        headers: {
+          apikey: key,
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+          Prefer: 'return=minimal',
+        },
+        body: JSON.stringify(payload),
+      });
+    } catch (e) {
+      const message =
+        'Supabase: Failed to fetch (нет доступа к ' +
+        url +
+        '). Проверьте интернет/блокировки (VPN/прокси/антивирус), и что URL проекта верный.';
+      return { data: null, error: { message, status: 0, raw: String((e && e.message) || e) } };
+    }
 
     const text = await res.text();
     let json = null;
@@ -108,17 +117,22 @@
   }
 
   async function insertSubmission(payload) {
-    const kind = keyKind();
+    try {
+      const kind = keyKind();
 
-    // Для новых publishable ключей (sb_publishable_...) нельзя использовать Bearer-токен.
-    // Через REST достаточно заголовка apikey — Supabase API Gateway сам разрулит.
-    if (kind === 'publishable') {
-      return await insertViaRest(payload);
+      // Для новых publishable ключей (sb_publishable_...) нельзя использовать Bearer-токен.
+      // Через REST достаточно заголовка apikey — Supabase API Gateway сам разрулит.
+      if (kind === 'publishable') {
+        return await insertViaRest(payload);
+      }
+
+      const client = getClient();
+      const { data, error } = await client.from('submissions').insert([payload]);
+      return { data, error };
+    } catch (e) {
+      const message = 'Supabase: ошибка (' + String((e && e.message) || e) + ')';
+      return { data: null, error: { message, status: 0, raw: String((e && e.stack) || e) } };
     }
-
-    const client = getClient();
-    const { data, error } = await client.from('submissions').insert([payload]);
-    return { data, error };
   }
 
   window.SkillPathSupabase = {

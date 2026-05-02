@@ -8,6 +8,8 @@
       profile: {
         email: '',
         name: '',
+        last_name: '',
+        phone: '',
         persona_type: 'student',
       },
       survey: {
@@ -15,6 +17,20 @@
       },
       recommended_directions: [],
       selected_direction: '',
+      roadmap: {
+        strengths: [],
+        gaps: [],
+      },
+      plan: {
+        duration_months: 6,
+        text: '',
+        days: [],
+        task_checks: {},
+        saved_at: '',
+      },
+      chat: {
+        messages: [],
+      },
       skills: {
         html: 'no',
         css: 'no',
@@ -62,6 +78,8 @@
     if (parsed.profile && typeof parsed.profile === 'object') {
       state.profile.email = String(parsed.profile.email || '');
       state.profile.name = String(parsed.profile.name || '');
+      state.profile.last_name = String(parsed.profile.last_name || '');
+      state.profile.phone = String(parsed.profile.phone || '');
       state.profile.persona_type = String(parsed.profile.persona_type || 'student');
     }
     if (parsed.survey && typeof parsed.survey === 'object') {
@@ -74,6 +92,27 @@
     }
     if (typeof parsed.selected_direction === 'string') {
       state.selected_direction = parsed.selected_direction;
+    }
+
+    if (parsed.roadmap && typeof parsed.roadmap === 'object') {
+      state.roadmap.strengths = Array.isArray(parsed.roadmap.strengths)
+        ? parsed.roadmap.strengths.filter(Boolean)
+        : [];
+      state.roadmap.gaps = Array.isArray(parsed.roadmap.gaps) ? parsed.roadmap.gaps.filter(Boolean) : [];
+    }
+
+    if (parsed.plan && typeof parsed.plan === 'object') {
+      state.plan.duration_months = Number(parsed.plan.duration_months || 6) || 6;
+      state.plan.text = String(parsed.plan.text || '');
+      state.plan.days = Array.isArray(parsed.plan.days) ? parsed.plan.days : [];
+      state.plan.task_checks = (parsed.plan.task_checks && typeof parsed.plan.task_checks === 'object')
+        ? parsed.plan.task_checks
+        : {};
+      state.plan.saved_at = String(parsed.plan.saved_at || '');
+    }
+
+    if (parsed.chat && typeof parsed.chat === 'object') {
+      state.chat.messages = Array.isArray(parsed.chat.messages) ? parsed.chat.messages : [];
     }
     if (parsed.skills && typeof parsed.skills === 'object') {
       Object.keys(state.skills).forEach((k) => {

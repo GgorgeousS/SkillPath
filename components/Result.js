@@ -18,6 +18,13 @@
       });
 
       const openDetails = Vue.ref('');
+      const showAll = Vue.ref(false);
+
+      const visibleDirections = Vue.computed(() => {
+        const list = directions.value;
+        if (!Array.isArray(list)) return [];
+        return showAll.value ? list : list.slice(0, 3);
+      });
 
       Vue.watch(
         directions,
@@ -31,6 +38,10 @@
       function buildPlan() {
         if (!selected.value) return;
         router.push('/skills');
+      }
+
+      function toggleViewMore() {
+        showAll.value = !showAll.value;
       }
 
       function coverFor(direction) {
@@ -123,13 +134,16 @@
 
       return {
         directions,
+        visibleDirections,
         selected,
         openDetails,
+        showAll,
         buildPlan,
         coverFor,
         titleFor,
         detailsFor,
         toggleDetails,
+        toggleViewMore,
       };
     },
     template: `
@@ -148,11 +162,11 @@
                 />
               </div>
             </div>
-            <p class="subtitle">Направления подходящие для вас:</p>
+            <p class="subtitle">Направления на основе ваших ответов</p>
 
             <div class="content compact">
-              <div class="grid cols-3" v-if="directions.length">
-                <div class="direction" :class="{ 'is-selected': selected === d }" v-for="(d, idx) in directions" :key="d">
+              <div class="grid cols-3" v-if="visibleDirections.length">
+                <div class="direction" :class="{ 'is-selected': selected === d }" v-for="(d, idx) in visibleDirections" :key="d">
                   <div class="direction-head">
                     <span class="tag" v-if="idx === 0">Рекомендуем</span>
                     <span v-else class="tag">Вариант</span>
@@ -171,7 +185,7 @@
                       <p class="small">Выбрано: <strong>{{ selected === d ? 'да' : 'нет' }}</strong></p>
                     </div>
                     <button type="button" class="btn-ghost" @click="toggleDetails(d)">
-                      {{ openDetails === d ? 'Свернуть' : 'Подробнее' }}
+                      {{ openDetails === d ? 'Свернуть' : 'Почему подходит…' }}
                     </button>
                   </div>
 
@@ -184,10 +198,16 @@
               <div class="note" v-else>
                 Рекомендации пока не рассчитаны. Вернитесь на опрос и выберите интересы.
               </div>
+
+              <div class="actions" style="justify-content:center" v-if="directions.length > 3">
+                <button type="button" class="btn-ghost" @click="toggleViewMore">
+                  {{ showAll ? 'Скрыть' : 'View more' }}
+                </button>
+              </div>
             </div>
 
             <div class="sticky-footer">
-              <button class="btn btn-primary" :disabled="!selected" @click="buildPlan">Построить план</button>
+              <button class="btn btn-primary" :disabled="!selected" @click="buildPlan">Построить план обучения</button>
             </div>
           </div>
         </div>
