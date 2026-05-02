@@ -1,0 +1,13 @@
+{
+  "name": "skillpath",
+  "version": "1.0.0",
+  "description": "SkillPath — профориентационный сервис на Vue 3 CDN",
+  "type": "module",
+  "scripts": {
+    "dev": "python -m http.server 5173",
+    "build": "echo \"Static site - no build needed\""
+  },
+  "keywords": ["skillpath", "vue3", "career-guidance"],
+  "author": "",
+  "license": "ISC"
+}
