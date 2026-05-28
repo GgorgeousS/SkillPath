@@ -210,6 +210,19 @@
         try {
           const p = payload();
 
+          // >>> Hook up BPMS fetch request here <<<
+          /*
+          try {
+            await fetch('https://YOUR_BPMS_WEBHOOK_URL', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ event: 'new_lead', data: p })
+            });
+          } catch (err) {
+            console.error('BPMS webhook failed:', err);
+          }
+          */
+
           const crmRes = await SkillPathCRM.createLead(crmPayload());
           if (crmRes && crmRes.error) {
             status.value = {

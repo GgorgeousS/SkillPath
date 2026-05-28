@@ -283,6 +283,32 @@ async def create_lead(
     if name is not None and not isinstance(name, str):
         raise HTTPException(status_code=400, detail="name must be a string")
 
+    # >>> Hook up BPMS HTTP request here <<<
+    
+    try:
+        # Для Битрикс24 раскомментируйте код ниже и вставьте ваш вебхук заканчивающийся на /crm.lead.add.json
+        webhook_url = "https://b24-nu16pw.bitrix24.ru/rest/1/i0b883b2kzcwbrtp/crm.lead.add.json"
+        
+        bitrix_payload = {
+            "fields": {
+                "TITLE": "Новая заявка со SkillPath",
+                "NAME": name if name else "Аноним",
+                "SOURCE_ID": "WEB",
+                "COMMENTS": json.dumps(payload, ensure_ascii=False) # передаем навыки и остальное
+            }
+        }
+        
+        req = urllib.request.Request(
+            webhook_url,
+            data=json.dumps(bitrix_payload).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST"
+        )
+        urllib.request.urlopen(req, timeout=5)
+    except Exception as e:
+        print(f"BPMS webhook failed: {e}")
+    
+
     created_at = _utc_now_iso()
 
     bitrix_contact_id: Optional[int] = None
