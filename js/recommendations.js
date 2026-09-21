@@ -56,8 +56,9 @@
     // Если пользователь ничего не выбрал/веса не совпали — дефолт.
     if (!hasSignal) return ['Frontend', 'Backend', 'QA Manual'];
 
+    // По ТЗ показываем 2–3 наиболее подходящих направления; полный список — на экране сравнения.
     const picked = sorted.filter((x) => x.score > 0).map((x) => x.name);
-    const result = picked.slice(0, 5);
+    const result = picked.slice(0, 3);
 
     // Минимум 3 карточки, чтобы UX был стабильным.
     const fallbackOrder = [

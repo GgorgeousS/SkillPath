@@ -77,17 +77,32 @@
     return typeof v === 'boolean' ? v : !!fallback;
   }
 
+  // Темп обучения: длительность плана и ориентировочная нагрузка.
+  const PACES = {
+    light: { key: 'light', label: 'Спокойный', hours: 1, days: 60, tasksPerDay: 3 },
+    normal: { key: 'normal', label: 'Средний', hours: 2, days: 30, tasksPerDay: 4 },
+    intensive: { key: 'intensive', label: 'Интенсивный', hours: 4, days: 14, tasksPerDay: 4 },
+  };
+
+  function paceOf(state) {
+    const k = state.plan && state.plan.pace;
+    return PACES[k] || PACES.normal;
+  }
+
   function buildPlanModel(state) {
     const dir = _dirKey(state);
     const helper = window.SkillPathRoadmapGraph;
     const checks = _ensurePlanChecks(state);
+    const pace = paceOf(state);
+    const total = pace.days;
 
     if (!helper || typeof helper.graphFor !== 'function') {
       return {
-        title: 'План обучения — 30 дней',
+        title: 'План обучения — ' + total + ' дней',
         goal: 'Сформируйте карту навыков, чтобы получить план по дням.',
         weeks: [],
         flatDays: [],
+        totalDays: total,
       };
     }
 
@@ -96,22 +111,29 @@
     const idToLabel = Object.create(null);
     g.nodes.forEach((n) => (idToLabel[n.id] = n.label));
 
-    const core = orderIds.map((id) => ({ id, label: idToLabel[id] || id }));
+    // Уже освоенные навыки в план не включаем; если освоено всё — повторяем весь набор.
+    const all = orderIds.map((id) => ({ id, label: idToLabel[id] || id }));
+    const gaps = all.filter((s) => !state.skills || state.skills[s.id] !== 'yes');
+    const core = gaps.length ? gaps : all;
     const coreLabels = core.map((s) => s.label);
 
-    const title = 'План становления ' + _titleFor(dir) + ' — 30 дней';
+    const title = 'План становления ' + _titleFor(dir) + ' — ' + total + ' дней';
     const shown = coreLabels.slice(0, 6);
     const more = coreLabels.length > shown.length ? ' и др.' : '';
     const goal =
       'Стать junior ' +
       _titleFor(dir).replace('‑', '-') +
-      ' за 30 дней: ' +
+      ' за ' + total + ' дней (≈ ' + pace.hours + ' ч в день): ' +
       shown.join(', ') +
       more +
       ', практика, мини‑проект, портфолио.';
 
+    const projectDay = total - 1;
+    const finalDay = total;
+    const lastStudyDay = total - 2;
+
     const learningDays = [];
-    for (let d = 1; d <= 28; d += 1) {
+    for (let d = 1; d <= lastStudyDay; d += 1) {
       if (d % 7 !== 0) learningDays.push(d);
     }
 
@@ -122,87 +144,62 @@
       return { skill, phase };
     };
 
+    const mk = (day, raw, extra) => ({
+      header: 'День ' + day,
+      ...(extra || {}),
+      tasks: raw.map((text, idx) => ({ text, done: _doneFor(checks, day, idx, false) })),
+    });
+
     function dayTasks(day) {
-      const isReview = day % 7 === 0 && day <= 28;
+      if (day === projectDay) {
+        return mk(day, [
+          'Мини‑проект: собрать учебный кейс под выбранную роль',
+          'Описать решение: шаги, материалы, выводы',
+          'Собрать портфолио (ссылки, скриншоты, описание)',
+        ], { kind: 'project' });
+      }
+      if (day === finalDay) {
+        return mk(day, [
+          'Повторение: пройтись по всем темам и пробелам',
+          'Подготовить резюме + короткий рассказ о проекте',
+          'План на следующий период: усилить 1–2 слабых навыка',
+        ], { kind: 'project' });
+      }
+      if (day % 7 === 0) {
+        return mk(day, [
+          'Повторение недели: тезисы + конспект',
+          'Практика: 3–5 задач по темам недели',
+          'Итог недели: отметить, что уже уверенно получается',
+        ]);
+      }
+
       const learningIndex = learningDays.indexOf(day);
       const entry = learningIndex >= 0 ? skillByLearningIndex(learningIndex) : null;
-      const skill = entry ? entry.skill : null;
-      const phase = entry ? entry.phase : 0;
-      const status = skill && state.skills ? state.skills[skill.id] : 'no';
-      const doneBySkill = status === 'yes';
-
-      if (day === 29) {
-        const raw = [
-          { text: 'Мини‑проект: собрать учебный кейс под выбранную роль', fallback: false },
-          { text: 'Описать решение: шаги, материалы, выводы', fallback: false },
-          { text: 'Собрать портфолио (ссылки, скриншоты, описание)', fallback: false },
-        ];
-        return {
-          header: 'День 29',
-          tasks: raw.map((t, idx) => ({ text: t.text, done: _doneFor(checks, day, idx, t.fallback) })),
-        };
-      }
-      if (day === 30) {
-        const raw = [
-          { text: 'Повторение: пройтись по всем темам и пробелам', fallback: false },
-          { text: 'Подготовить резюме + короткий рассказ о проекте', fallback: false },
-          { text: 'План на следующий месяц: усилить 1–2 слабых навыка', fallback: false },
-        ];
-        return {
-          header: 'День 30',
-          tasks: raw.map((t, idx) => ({ text: t.text, done: _doneFor(checks, day, idx, t.fallback) })),
-        };
+      if (!entry) {
+        return mk(day, ['Закрепление: практика и мини‑задачи', 'Повторение слабых мест']);
       }
 
-      if (isReview) {
-        const raw = [
-          { text: 'Повторение недели: тезисы + конспект', fallback: false },
-          { text: 'Практика: 3–5 задач по темам недели', fallback: false },
-          { text: 'Итог недели: отметить, что уже уверенно получается', fallback: false },
-        ];
-        return {
-          header: 'День ' + day,
-          tasks: raw.map((t, idx) => ({ text: t.text, done: _doneFor(checks, day, idx, t.fallback) })),
-        };
-      }
+      const { skill, phase } = entry;
+      const stage = phase === 0 ? 'основы' : phase === 1 ? 'углубление' : phase === 2 ? 'практика' : phase === 3 ? 'мини‑проект' : 'закрепление';
+      const extra = { skillLabel: skill.label, skillId: skill.id };
 
-      if (!skill) {
-        const raw = [
-          { text: 'Закрепление: практика и мини‑задачи', fallback: false },
-          { text: 'Повторение слабых мест', fallback: false },
-        ];
-        return {
-          header: 'День ' + day,
-          tasks: raw.map((t, idx) => ({ text: t.text, done: _doneFor(checks, day, idx, t.fallback) })),
-        };
-      }
-
-      const stage = phase === 0 ? 'основы' : phase === 1 ? 'углубление' : phase === 2 ? 'практика' : 'мини‑проект';
       if (stage === 'мини‑проект') {
         const raw = [
-          { text: 'Мини‑проект: сделать небольшой кейс с использованием ' + skill.label, fallback: doneBySkill },
-          { text: 'Рефакторинг: привести код/структуру в порядок', fallback: doneBySkill },
-          { text: 'Проверка: пройтись по чек‑листу и исправить ошибки', fallback: doneBySkill },
-          { text: 'Заметки: оформить выводы и примеры по ' + skill.label, fallback: doneBySkill },
+          'Мини‑проект: сделать небольшой кейс с использованием ' + skill.label,
+          'Рефакторинг: привести код/структуру в порядок',
+          'Проверка: пройтись по чек‑листу и исправить ошибки',
+          'Заметки: оформить выводы и примеры по ' + skill.label,
         ];
-        return {
-          header: 'День ' + day,
-          skillLabel: skill.label,
-          tasks: raw.map((t, idx) => ({ text: t.text, done: _doneFor(checks, day, idx, t.fallback) })),
-        };
+        return mk(day, raw.slice(0, pace.tasksPerDay), extra);
       }
 
       const raw = [
-        { text: 'Теория: ' + skill.label + ' — ' + stage, fallback: doneBySkill },
-        { text: 'Практика: 3–5 упражнений по ' + skill.label, fallback: doneBySkill },
-        { text: 'Мини‑задача: применить ' + skill.label + ' в маленьком кейсе', fallback: doneBySkill },
-        { text: 'Конспект: выписать 5–7 ключевых пунктов', fallback: doneBySkill },
+        'Теория: ' + skill.label + ' — ' + stage,
+        'Практика: 3–5 упражнений по ' + skill.label,
+        'Мини‑задача: применить ' + skill.label + ' в маленьком кейсе',
+        'Конспект: выписать 5–7 ключевых пунктов',
       ];
-      return {
-        header: 'День ' + day,
-        skillLabel: skill.label,
-        tasks: raw.map((t, idx) => ({ text: t.text, done: _doneFor(checks, day, idx, t.fallback) })),
-      };
+      return mk(day, raw.slice(0, pace.tasksPerDay), extra);
     }
 
     function weekFocus(fromDay, toDay) {
@@ -217,31 +214,134 @@
       return used.join(' + ');
     }
 
-    const weeks = [
-      { title: 'Неделя 1 — ' + weekFocus(1, 7), days: [] },
-      { title: 'Неделя 2 — ' + weekFocus(8, 14), days: [] },
-      { title: 'Неделя 3 — ' + weekFocus(15, 21), days: [] },
-      { title: 'Неделя 4 — ' + weekFocus(22, 28), days: [] },
-      { title: 'Финал — проект и портфолио', days: [] },
-    ];
+    const weekCount = Math.ceil(lastStudyDay / 7);
+    const weeks = [];
+    for (let w = 0; w < weekCount; w += 1) {
+      const from = w * 7 + 1;
+      const to = Math.min((w + 1) * 7, lastStudyDay);
+      weeks.push({ title: 'Неделя ' + (w + 1) + ' — ' + weekFocus(from, to), days: [], from, to });
+    }
+    weeks.push({ title: 'Финал — проект и портфолио', days: [], from: projectDay, to: finalDay });
 
     const flatDays = [];
-    for (let day = 1; day <= 30; day += 1) {
+    for (let day = 1; day <= total; day += 1) {
       const model = dayTasks(day);
       flatDays.push({ day, label: model.skillLabel || (model.tasks[0] ? model.tasks[0].text : '') });
-      const weekIdx = day <= 7 ? 0 : day <= 14 ? 1 : day <= 21 ? 2 : day <= 28 ? 3 : 4;
-      weeks[weekIdx].days.push({ day, ...model });
+      const week = weeks.find((w) => day >= w.from && day <= w.to) || weeks[weeks.length - 1];
+      week.days.push({ day, ...model });
     }
 
-    return { title, goal, weeks, flatDays };
+    return { title, goal, weeks, flatDays, totalDays: total };
+  }
+
+
+  // Roadmap: разделы = навыки направления (в порядке изучения), темы = этапы внутри раздела.
+  // Процент темы и раздела считается по отметкам заданий в карьерном плане.
+  const PROJECT_TOPICS = [
+    'Мини‑проект под выбранную роль',
+    'Описание решения',
+    'Портфолио',
+    'Повторение всех тем',
+    'Резюме и рассказ о проекте',
+    'План на следующий период',
+  ];
+
+  function _pct(done, total) {
+    return total ? Math.round((done / total) * 100) : 0;
+  }
+
+  // Делим задания раздела на n подряд идущих групп — по одной на тему.
+  function _chunkTopics(titles, tasks) {
+    const n = Math.min(titles.length, tasks.length);
+    const topics = [];
+    for (let i = 0; i < n; i += 1) {
+      const part = tasks.slice(Math.floor((i * tasks.length) / n), Math.floor(((i + 1) * tasks.length) / n));
+      const done = part.filter((t) => t.done).length;
+      topics.push({ title: titles[i], percent: _pct(done, part.length) });
+    }
+    return topics;
+  }
+
+  function buildRoadmapSections(state) {
+    const D = window.SkillPathDirections;
+    const helper = window.SkillPathRoadmapGraph;
+    if (!D || !helper) return [];
+
+    const g = helper.graphFor(_dirKey(state));
+    const order = _topoOrder(g.nodes, g.edges);
+    const days = buildPlanModel(state).weeks.reduce((acc, w) => acc.concat(w.days), []);
+
+    const sections = order.map((id) => {
+      const info = D.SKILL_INFO[id] || { label: id, desc: '', icon: '📘', topics: [] };
+      const level = state.skills && state.skills[id] ? state.skills[id] : 'no';
+      const tasks = days.filter((d) => d.skillId === id).reduce((acc, d) => acc.concat(d.tasks), []);
+
+      // Навык, который пользователь уже освоил, в план не попал — показываем его как пройденный.
+      if (!tasks.length) {
+        const known = level === 'yes';
+        return {
+          id, title: info.label, icon: info.icon || '📘', desc: info.desc, level,
+          percent: known ? 100 : 0,
+          topics: (info.topics || []).map((t) => ({ title: t, percent: known ? 100 : 0 })),
+        };
+      }
+      const done = tasks.filter((t) => t.done).length;
+      return {
+        id, title: info.label, icon: info.icon || '📘', desc: info.desc, level,
+        percent: _pct(done, tasks.length),
+        topics: _chunkTopics(info.topics || [], tasks),
+      };
+    });
+
+    const finalTasks = days.filter((d) => d.kind === 'project').reduce((acc, d) => acc.concat(d.tasks), []);
+    if (finalTasks.length) {
+      const done = finalTasks.filter((t) => t.done).length;
+      sections.push({
+        id: 'project', title: 'Проект и портфолио', icon: '🚀', level: 'no',
+        desc: 'Соберите мини‑проект, оформите портфолио и подготовьтесь к собеседованиям.',
+        percent: _pct(done, finalTasks.length),
+        topics: _chunkTopics(PROJECT_TOPICS, finalTasks),
+      });
+    }
+
+    sections.forEach((s) => {
+      s.state = s.percent >= 100 ? 'done' : s.percent > 0 ? 'progress' : 'todo';
+    });
+    return sections;
+  }
+
+  // Сколько заданий плана выполнено (для индикатора на экране «Прогресс»).
+  function planStats(model) {
+    let done = 0;
+    let total = 0;
+    ((model && model.weeks) || []).forEach((w) => {
+      (w.days || []).forEach((d) => {
+        (d.tasks || []).forEach((t) => {
+          total += 1;
+          if (t.done) done += 1;
+        });
+      });
+    });
+    return { done, total, percent: total ? Math.round((done / total) * 100) : 0 };
   }
 
   function setTaskDone(state, day, idx, checked) {
     const checks = _ensurePlanChecks(state);
     checks[_keyOf(day, idx)] = !!checked;
+
+    // В историю обучения пишем только завершение дня целиком, а не каждый чекбокс.
+    if (!checked || !window.SkillPathStore) return;
+    const model = buildPlanModel(state);
+    const found = model.weeks.reduce((acc, w) => acc || w.days.find((d) => d.day === day), null);
+    if (found && found.tasks.every((t) => t.done)) {
+      window.SkillPathStore.logEvent('progress', 'Выполнен день ' + day + ' плана');
+    }
   }
 
+  window.SkillPathPlan.PACES = PACES;
   window.SkillPathPlan.buildPlanModel = buildPlanModel;
+  window.SkillPathPlan.planStats = planStats;
+  window.SkillPathPlan.buildRoadmapSections = buildRoadmapSections;
   window.SkillPathPlan.setTaskDone = setTaskDone;
 
   window.SkillPathComponents.Plan = {
@@ -250,7 +350,19 @@
       const router = VueRouter.useRouter();
       const state = SkillPathStore.state;
 
-      const durationMonths = Vue.computed(() => (state.plan && state.plan.duration_months) || 6);
+      const paces = Object.values(PACES);
+      const pace = Vue.computed({
+        get: () => paceOf(state).key,
+        set: (v) => {
+          if (v === paceOf(state).key) return;
+          const hasChecks = Object.values(_ensurePlanChecks(state)).some(Boolean);
+          if (hasChecks && !window.confirm('При смене темпа план пересчитается, а отметки о выполнении сбросятся. Продолжить?')) {
+            return;
+          }
+          state.plan.task_checks = {};
+          state.plan.pace = v;
+        },
+      });
 
       const planModel = Vue.computed(() => {
         const helper = window.SkillPathPlan;
@@ -267,12 +379,14 @@
       const saveStatus = Vue.ref('');
 
       function savePlan() {
+        const p = paceOf(state);
         state.plan = state.plan || {};
         if (!state.plan.task_checks || typeof state.plan.task_checks !== 'object') state.plan.task_checks = {};
         state.plan.saved_at = new Date().toISOString();
-        state.plan.duration_months = durationMonths.value;
+        state.plan.duration_months = Math.max(1, Math.round(p.days / 30));
         state.plan.text = planText.value;
         state.plan.days = (planModel.value && planModel.value.flatDays) ? planModel.value.flatDays : [];
+        SkillPathStore.logEvent('plan', 'Сохранён карьерный план: ' + p.days + ' дн., темп «' + p.label + '»');
         saveStatus.value = 'План сохранён';
         router.push('/progress');
       }
@@ -283,30 +397,41 @@
         helper.setTaskDone(state, day, idx, checked);
       }
 
-      return { durationMonths, planText, planModel, saveStatus, savePlan, setTaskDone };
+      return { paces, pace, planText, planModel, saveStatus, savePlan, setTaskDone };
     },
     template: `
-      <main class="page">
+      <main class="page" id="main">
         <div class="shell">
           <div class="phone">
             <div class="topbar">
               <button class="back" type="button" @click="$router.back()" aria-label="Назад">←</button>
               <div class="topbar-title">SkillPath</div>
               <div class="topbar-right" aria-hidden="true">
-                <img
-                  class="logo-mini"
-                  src="./assets/skillpathnofone.png"
-                  alt=""
-                  onerror="this.onerror=null; this.src='./assets/logo.svg';"
-                />
+                <img class="logo-mini" src="./assets/logo-mark.png" alt="" />
               </div>
             </div>
             <p class="subtitle">Ваш карьерный план</p>
 
             <div class="content compact">
+              <div class="hint" role="note">
+                <strong>Шаг 3 из 4.</strong> Выберите темп обучения — план пересчитается. Уже освоенные навыки в план не попадают. Сохраните план, чтобы отслеживать прогресс.
+              </div>
+
               <div class="panel">
+                <div class="h2">Темп обучения</div>
+                <div class="pace" role="radiogroup" aria-label="Темп обучения">
+                  <label class="pace__item" v-for="p in paces" :key="p.key" :class="{ 'is-active': pace === p.key }">
+                    <input type="radio" name="pace" :value="p.key" v-model="pace" />
+                    <span>
+                      <strong>{{ p.label }}</strong>
+                      <span class="small pace__desc">≈ {{ p.hours }} ч в день · {{ p.days }} дней</span>
+                    </span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="panel" style="margin-top:14px">
                 <div class="h2">Ваш карьерный план</div>
-                <p class="small" style="margin-top:6px">План обучения: 30 дней</p>
 
                 <div class="plan-box" style="margin-top:12px">
                   <div class="plan-md" v-if="planModel && planModel.weeks && planModel.weeks.length">
@@ -323,8 +448,10 @@
                         <div class="plan-md__dayTitle"><strong>{{ d.header }}</strong><span v-if="d.skillLabel"> — {{ d.skillLabel }}</span></div>
                         <ul class="task-list">
                           <li v-for="(t, idx) in d.tasks" :key="idx">
-                            <input class="task-checkbox" type="checkbox" :checked="t.done" @change="setTaskDone(d.day, idx, $event.target.checked)" aria-label="Отметить выполнено" />
-                            <span class="task-text">{{ t.text }}</span>
+                            <label class="task-label">
+                              <input class="task-checkbox" type="checkbox" :checked="t.done" @change="setTaskDone(d.day, idx, $event.target.checked)" />
+                              <span class="task-text">{{ t.text }}</span>
+                            </label>
                           </li>
                         </ul>
                       </div>
@@ -333,7 +460,7 @@
                   <div class="note" v-else>План пока не построен — вернитесь на карту навыков.</div>
                 </div>
 
-                <div class="note" v-if="saveStatus">{{ saveStatus }}</div>
+                <div class="note success" v-if="saveStatus" role="status">{{ saveStatus }}</div>
               </div>
             </div>
 

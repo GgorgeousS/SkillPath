@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  const STORAGE_KEY = 'skillpath_mvp_v1';
+  const HISTORY_LIMIT = 100;
 
   function defaultState() {
     return {
@@ -27,10 +27,9 @@
         days: [],
         task_checks: {},
         saved_at: '',
+        pace: 'normal',
       },
-      chat: {
-        messages: [],
-      },
+      history: [],
       skills: {
         html: 'no',
         css: 'no',
@@ -66,10 +65,8 @@
     };
   }
 
-  function load() {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return defaultState();
-    const parsed = window.SkillPathUtils.safeJsonParse(raw, null);
+  // Приводит данные (например, полученные с сервера) к корректной структуре.
+  function normalize(parsed) {
     if (!parsed || typeof parsed !== 'object') return defaultState();
 
     // Небольшая защита от поломанной структуры
@@ -109,10 +106,14 @@
         ? parsed.plan.task_checks
         : {};
       state.plan.saved_at = String(parsed.plan.saved_at || '');
+      state.plan.pace = ['light', 'normal', 'intensive'].includes(parsed.plan.pace) ? parsed.plan.pace : 'normal';
     }
 
-    if (parsed.chat && typeof parsed.chat === 'object') {
-      state.chat.messages = Array.isArray(parsed.chat.messages) ? parsed.chat.messages : [];
+    if (Array.isArray(parsed.history)) {
+      state.history = parsed.history
+        .filter((e) => e && typeof e === 'object' && e.text)
+        .map((e) => ({ ts: String(e.ts || ''), type: String(e.type || ''), text: String(e.text) }))
+        .slice(-HISTORY_LIMIT);
     }
     if (parsed.skills && typeof parsed.skills === 'object') {
       Object.keys(state.skills).forEach((k) => {
@@ -127,29 +128,38 @@
     return state;
   }
 
-  function save(snapshot) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot));
-  }
+  // Данные пользователя живут на сервере (PostgreSQL) и загружаются после входа в аккаунт —
+  // см. js/auth.js. В браузере они не хранятся, чтобы разные аккаунты не смешивались.
+  const state = Vue.reactive(defaultState());
 
-  const state = Vue.reactive(load());
-
-  Vue.watch(
-    state,
-    () => {
-      save(Vue.toRaw(state));
-    },
-    { deep: true }
-  );
-
-  function reset() {
-    const fresh = defaultState();
+  function assign(fresh) {
     Object.keys(fresh).forEach((key) => {
       state[key] = fresh[key];
     });
   }
 
+  function replaceState(parsed) {
+    assign(normalize(parsed));
+  }
+
+  // История обучения для личного профиля. Подряд идущие одинаковые записи не дублируем.
+  function logEvent(type, text) {
+    const last = state.history[state.history.length - 1];
+    if (last && last.type === type && last.text === text) return;
+    state.history.push({ ts: new Date().toISOString(), type, text });
+    if (state.history.length > HISTORY_LIMIT) {
+      state.history.splice(0, state.history.length - HISTORY_LIMIT);
+    }
+  }
+
+  function reset() {
+    assign(defaultState());
+  }
+
   window.SkillPathStore = {
     state,
     reset,
+    replaceState,
+    logEvent,
   };
 })();

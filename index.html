@@ -3,33 +3,48 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SkillPath</title>
-    <link rel="stylesheet" href="./css/styles.css" />
+    <title>SkillPath — ваш путь в IT</title>
+    <meta name="description" content="SkillPath — веб-сервис для профориентации, оценки навыков и карьерного плана в IT." />
+    <!-- Тема применяется до отрисовки, чтобы не было мигания. По умолчанию — светлая. -->
+    <script>
+      try {
+        document.documentElement.setAttribute('data-theme', localStorage.getItem('skillpath_theme') === 'dark' ? 'dark' : 'light');
+      } catch (e) {
+        document.documentElement.setAttribute('data-theme', 'light');
+      }
+    </script>
+    <link rel="stylesheet" href="./css/styles.css?v=10" />
+    <link rel="stylesheet" href="./css/landing.css?v=10" />
+    <link rel="stylesheet" href="./css/dark.css?v=10" />
 
     <!-- Vue 3 (global build, no bundlers) -->
     <script defer src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
     <!-- Vue Router 4 (global build) -->
     <script defer src="https://unpkg.com/vue-router@4/dist/vue-router.global.prod.js"></script>
-    <!-- Supabase JS SDK v2 (UMD build exposes global `supabase`) -->
-    <script defer src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 
     <!-- App scripts (order matters) -->
-    <script defer src="./js/utils.js"></script>
-    <script defer src="./js/recommendations.js"></script>
-    <script defer src="./js/crm.js"></script>
-    <script defer src="./js/supabase.js"></script>
-    <script defer src="./js/store.js"></script>
+    <script defer src="./js/utils.js?v=10"></script>
+    <script defer src="./js/recommendations.js?v=10"></script>
+    <script defer src="./js/directions.js?v=10"></script>
+    <script defer src="./js/api.js?v=10"></script>
+    <script defer src="./js/store.js?v=10"></script>
+    <script defer src="./js/auth.js?v=10"></script>
 
-    <script defer src="./components/Onboarding.js"></script>
-    <script defer src="./components/Survey.js"></script>
-    <script defer src="./components/Result.js"></script>
-    <script defer src="./components/Skills.js"></script>
-    <script defer src="./components/Roadmap.js"></script>
-    <script defer src="./components/Plan.js"></script>
-    <script defer src="./components/Progress.js"></script>
-    <script defer src="./components/AI.js"></script>
+    <script defer src="./components/Onboarding.js?v=10"></script>
+    <script defer src="./components/Auth.js?v=10"></script>
+    <script defer src="./components/Survey.js?v=10"></script>
+    <script defer src="./components/Result.js?v=10"></script>
+    <script defer src="./components/Compare.js?v=10"></script>
+    <script defer src="./components/Skills.js?v=10"></script>
+    <script defer src="./components/RoadmapTimeline.js?v=10"></script>
+    <script defer src="./components/Roadmap.js?v=10"></script>
+    <script defer src="./components/Plan.js?v=10"></script>
+    <script defer src="./components/Progress.js?v=10"></script>
+    <script defer src="./components/Knowledge.js?v=10"></script>
+    <script defer src="./components/Profile.js?v=10"></script>
+    <script defer src="./components/Support.js?v=10"></script>
 
-    <script defer src="./js/app.js"></script>
+    <script defer src="./js/app.js?v=10"></script>
   </head>
   <body>
     <noscript>Для работы SkillPath нужен JavaScript.</noscript>

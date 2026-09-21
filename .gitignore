@@ -5,10 +5,8 @@ __pycache__/
 
 # Env files
 .env
-crm_api/.env
+api/.env
 
-# CRM local DB
-crm_api/*.db
 
 # Node
 node_modules/

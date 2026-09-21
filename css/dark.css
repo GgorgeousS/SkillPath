@@ -1,0 +1,89 @@
+/* Тёмная тема (переключается кнопкой в меню, значение хранится в localStorage).
+   Палитра — «Space gradients»: #03042C / #172090 / #483ACC / #935AF0 / #F897FE. */
+
+html[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#03042C;
+  --panel:#0E1247;
+  --text:#EEEBFF;
+  --muted:#B4B8E6;
+  --border:rgba(147,90,240,.32);
+  --shadow:0 14px 36px rgba(0,0,0,.45);
+  --accent:#935AF0;
+  --btn:#EEEBFF;
+  --btnText:#03042C;
+  --chip:rgba(255,255,255,.06);
+}
+html[data-theme="dark"] body{
+  color:var(--text);
+  background:
+    radial-gradient(900px 520px at 15% 0%, rgba(72,58,204,.45), transparent 55%),
+    radial-gradient(900px 520px at 85% 10%, rgba(23,32,144,.5), transparent 55%),
+    linear-gradient(180deg, #050733, #03042C);
+}
+
+/* surfaces */
+html[data-theme="dark"] .card,
+html[data-theme="dark"] .direction,
+html[data-theme="dark"] .panel,
+html[data-theme="dark"] .plan-md__day,
+html[data-theme="dark"] .table-wrap,
+html[data-theme="dark"] .rm__card,
+html[data-theme="dark"] .pace__item{background:var(--panel)}
+
+html[data-theme="dark"] .plan-box,
+html[data-theme="dark"] .card-link__box,
+html[data-theme="dark"] .progress-bar{background:rgba(255,255,255,.06)}
+html[data-theme="dark"] .rm__minibar{background:rgba(255,255,255,.12)}
+html[data-theme="dark"] .levels{background:rgba(255,255,255,.06);box-shadow:none}
+
+html[data-theme="dark"] .input,
+html[data-theme="dark"] .select{background:rgba(255,255,255,.07);color:var(--text);border-color:#8D91C9}
+html[data-theme="dark"] .input:focus,
+html[data-theme="dark"] .select:focus{outline-color:rgba(248,151,254,.7)}
+html[data-theme="dark"] input[type="checkbox"]{accent-color:#935AF0}
+html[data-theme="dark"] .pace__item{border-color:#8D91C9}
+
+@media (min-width: 521px){
+  html[data-theme="dark"] .panel,
+  html[data-theme="dark"] .direction{background:rgba(14,18,71,.72)}
+  html[data-theme="dark"] .list-item,
+  html[data-theme="dark"] .tag{background:rgba(255,255,255,.06)}
+}
+@media (max-width: 520px){
+  html[data-theme="dark"] .sticky-footer{background:linear-gradient(180deg, rgba(14,18,71,0), var(--panel) 35%)}
+}
+
+/* status colors */
+html[data-theme="dark"] .error{color:#FFB4B4;background:rgba(255,99,99,.12)}
+html[data-theme="dark"] .success{color:#9EE6B0;background:rgba(76,217,100,.12)}
+html[data-theme="dark"] .btn-danger{color:#FF9AA8;border-color:#FF9AA8}
+
+/* roadmap */
+html[data-theme="dark"] .rm__percent{color:#D2C4FF}
+html[data-theme="dark"] .rm__level--yes{color:#D9CCFF}
+html[data-theme="dark"] .rm__level--mid{color:#A9D6FF}
+
+/* navigation */
+html[data-theme="dark"] .sitenav{background:rgba(3,4,44,.82);border-bottom-color:rgba(147,90,240,.3)}
+html[data-theme="dark"] .sitenav__links a{color:#DDE0FF}
+html[data-theme="dark"] .sitenav__links a:hover{background:rgba(255,255,255,.1)}
+html[data-theme="dark"] .sitenav__links a[aria-current="page"]{color:#03042C;background:linear-gradient(100deg,#F897FE,#935AF0)}
+
+/* иллюстрации направлений нарисованы на светлом фоне — слегка приглушаем */
+html[data-theme="dark"] .media-img{filter:brightness(.86) saturate(1.05)}
+
+/* auth + cabinet */
+html[data-theme="dark"] .tabs__tab.is-active{background:linear-gradient(100deg,#F897FE,#935AF0);color:#03042C}
+html[data-theme="dark"] .link-btn{color:#F897FE}
+html[data-theme="dark"] .cab-sync.is-error{color:#FFB4B4}
+
+/* основная кнопка: как на лендинге — розово-фиолетовый градиент и тёмный текст */
+html[data-theme="dark"] .btn-primary,
+html[data-theme="dark"] a.btn.btn-primary{background:linear-gradient(100deg,#F897FE,#935AF0);color:#03042C}
+html[data-theme="dark"] .tabs__tab{color:#B4B8E6}
+
+/* логотип чёрный — на тёмном фоне делаем его белым и добавляем мягкое свечение */
+html[data-theme="dark"] .logo-mini{
+  filter:invert(1) drop-shadow(0 0 6px rgba(248,151,254,.75)) drop-shadow(0 0 16px rgba(147,90,240,.6));
+}

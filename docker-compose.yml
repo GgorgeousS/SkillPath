@@ -1,0 +1,15 @@
+# Локальный PostgreSQL для разработки: docker compose up -d
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: skillpath
+      POSTGRES_PASSWORD: skillpath
+      POSTGRES_DB: skillpath
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - skillpath_pgdata:/var/lib/postgresql/data
+
+volumes:
+  skillpath_pgdata:

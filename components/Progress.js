@@ -89,91 +89,11 @@
           .map((s) => s.label);
       });
 
-      const progressPercent = Vue.computed(() => {
-        const total = trackedSkills.value.length || 1;
-        return Math.round((done.value.length / total) * 100);
-      });
 
-      function topoOrder(nodes, edges) {
-        const ids = nodes.map((n) => n.id);
-        const idx = Object.create(null);
-        ids.forEach((id, i) => (idx[id] = i));
-
-        const incoming = Object.create(null);
-        const outgoing = Object.create(null);
-        ids.forEach((id) => {
-          incoming[id] = 0;
-          outgoing[id] = [];
-        });
-
-        (edges || []).forEach(([a, b]) => {
-          if (!(a in outgoing) || !(b in incoming)) return;
-          outgoing[a].push(b);
-          incoming[b] += 1;
-        });
-
-        const q = ids.filter((id) => incoming[id] === 0);
-        q.sort((a, b) => (idx[a] ?? 0) - (idx[b] ?? 0));
-
-        const out = [];
-        while (q.length) {
-          const cur = q.shift();
-          out.push(cur);
-          (outgoing[cur] || []).forEach((nxt) => {
-            incoming[nxt] -= 1;
-            if (incoming[nxt] === 0) {
-              q.push(nxt);
-              q.sort((a, b) => (idx[a] ?? 0) - (idx[b] ?? 0));
-            }
-          });
-        }
-
-        ids.forEach((id) => {
-          if (!out.includes(id)) out.push(id);
-        });
-        return out;
-      }
-
-      const embeddedGraph = Vue.computed(() => {
-        const helper = window.SkillPathRoadmapGraph;
-        if (!helper || typeof helper.graphFor !== 'function') return null;
-        const g = helper.graphFor(direction.value);
-        const layout = helper.layoutGraph(g.nodes, g.edges);
-        const nodesWithPos = g.nodes.map((n) => {
-          const p = layout.pos[n.id];
-          const v = state.skills ? state.skills[n.id] : 'no';
-          return {
-            ...n,
-            x: p ? p.x : 0,
-            y: p ? p.y : 0,
-            w: p ? p.w : 132,
-            h: p ? p.h : 42,
-            status: v === 'yes' || v === 'mid' || v === 'no' ? v : 'no',
-          };
-        });
-
-        const orderIds = topoOrder(g.nodes, g.edges);
-        const idToLabel = Object.create(null);
-        g.nodes.forEach((n) => (idToLabel[n.id] = n.label));
-        const order = orderIds.map((id) => idToLabel[id] || id);
-
-        return {
-          nodes: nodesWithPos,
-          edges: layout.edgeLines,
-          width: layout.width,
-          height: layout.height,
-          order,
-        };
-      });
-
-      const planDays = Vue.computed(() => {
-        // Prefer saved plan if present; otherwise build from the same roadmap order.
-        const saved = state.plan && Array.isArray(state.plan.days) ? state.plan.days : [];
-        if (saved.length) return saved;
-
-        const g = embeddedGraph.value;
-        if (!g) return [];
-        return (g.order || []).map((label, i) => ({ day: i + 1, label }));
+      // Краткая сводка roadmap: раздел → процент изучения (подробно — на экране Roadmap).
+      const roadmapSections = Vue.computed(() => {
+        const helper = window.SkillPathPlan;
+        return helper && typeof helper.buildRoadmapSections === 'function' ? helper.buildRoadmapSections(state) : [];
       });
 
       function limitPlanModel(model, maxDay) {
@@ -211,11 +131,44 @@
         isPlanExpanded.value = !isPlanExpanded.value;
       }
 
-      const aiRecommendation = Vue.computed(() => {
-        // Simple deterministic recommendation (no external API)
-        const remainingList = remaining.value.slice(0, 3);
-        if (!remainingList.length) return 'Рекомендация: закрепляйте навыки через проекты.';
-        return 'Рекомендация: начните с ' + remainingList.join(', ') + ' и закрепите практикой.';
+      // Прогресс = доля выполненных заданий плана.
+      const stats = Vue.computed(() => {
+        const helper = window.SkillPathPlan;
+        const m = planModelFull.value;
+        if (!helper || typeof helper.planStats !== 'function' || !m) return { done: 0, total: 0, percent: 0 };
+        return helper.planStats(m);
+      });
+      const progressPercent = Vue.computed(() => stats.value.percent);
+
+      const hasSavedPlan = Vue.computed(() => !!(state.plan && state.plan.saved_at));
+
+      // Рекомендации строятся по правилам из состояния пользователя: следующий шаг плана и приоритетные навыки.
+      const recommendation = Vue.computed(() => {
+        const lines = [];
+        const m = planModelFull.value;
+        if (!hasSavedPlan.value) {
+          lines.push('Сформируйте и сохраните карьерный план — так вы сможете отмечать шаги и видеть динамику.');
+        } else if (m) {
+          let next = null;
+          (m.weeks || []).some((w) =>
+            (w.days || []).some((d) => {
+              if ((d.tasks || []).some((t) => !t.done)) {
+                next = d;
+                return true;
+              }
+              return false;
+            })
+          );
+          if (next) {
+            lines.push('Следующий шаг: ' + next.header + (next.skillLabel ? ' — ' + next.skillLabel : '') + '.');
+          } else {
+            lines.push('Все задания плана выполнены. Соберите портфолио и переходите к откликам на вакансии.');
+          }
+        }
+        const rest = remaining.value.slice(0, 3);
+        if (rest.length) lines.push('Приоритетные навыки: ' + rest.join(', ') + '. Закрепляйте их практикой и мини‑проектами.');
+        else lines.push('Навыки направления освоены — закрепляйте знания через проекты и повторение.');
+        return lines;
       });
 
       function goPlan() {
@@ -224,8 +177,8 @@
       function goRoadmap() {
         router.push('/roadmap');
       }
-      function goAI() {
-        router.push('/ai');
+      function goKnowledge() {
+        router.push('/knowledge');
       }
 
       function setTaskDone(day, idx, checked) {
@@ -238,21 +191,22 @@
         progressPercent,
         done,
         remaining,
-        embeddedGraph,
-        planDays,
+        roadmapSections,
         displayPlanModel,
         hasMorePlanDays,
         isPlanExpanded,
-        aiRecommendation,
+        stats,
+        hasSavedPlan,
+        recommendation,
         goPlan,
         goRoadmap,
-        goAI,
+        goKnowledge,
         togglePlanExpanded,
         setTaskDone,
       };
     },
     template: `
-      <main class="page">
+      <main class="page" id="main">
         <div class="shell">
           <div class="phone">
             <div class="topbar">
@@ -261,30 +215,33 @@
               <div class="topbar-right" aria-hidden="true">
                 <img
                   class="logo-mini"
-                  src="./assets/skillpathnofone.png"
+                  src="./assets/logo-mark.png"
                   alt=""
-                  onerror="this.onerror=null; this.src='./assets/logo.svg';"
                 />
               </div>
             </div>
             <p class="subtitle">Прогресс</p>
 
             <div class="content compact">
+              <div class="hint" role="note">
+                <strong>Шаг 4 из 4.</strong> Отмечайте выполненные задания прямо в плане — индикатор обновится сам. Полный план открывается по нажатию на карточку.
+              </div>
               <div class="panel">
                 <div class="h2">Прогресс</div>
 
                 <div class="progress-wrap" style="margin-top:12px">
                   <div class="progress-meta">
-                    <span class="badge">Заполнение прогресса в %</span>
+                    <span class="badge">Выполнено заданий: {{ stats.done }} из {{ stats.total }}</span>
                     <span class="badge">{{ progressPercent }}%</span>
                   </div>
-                  <div class="progress-bar" role="progressbar" :aria-valuenow="progressPercent" aria-valuemin="0" aria-valuemax="100">
+                  <div class="progress-bar" role="progressbar" aria-label="Выполнение плана" :aria-valuenow="progressPercent" aria-valuemin="0" aria-valuemax="100">
                     <div class="progress-bar__fill" :style="{ width: progressPercent + '%' }"></div>
                   </div>
+                  <p class="small" v-if="!hasSavedPlan">План ещё не сохранён — откройте «Ваш карьерный план» и нажмите «Сохранить план».</p>
                 </div>
 
                 <div style="margin-top:14px">
-                  <div class="h2" style="font-size:14px;margin-bottom:8px">Выполнено</div>
+                  <div class="h2" style="font-size:14px;margin-bottom:8px">Освоенные навыки</div>
                   <div class="chip-list" v-if="done.length">
                     <span class="chip" v-for="s in done" :key="s">{{ s }}</span>
                   </div>
@@ -292,7 +249,7 @@
                 </div>
 
                 <div style="margin-top:12px">
-                  <div class="h2" style="font-size:14px;margin-bottom:8px">Осталось</div>
+                  <div class="h2" style="font-size:14px;margin-bottom:8px">Осталось освоить</div>
                   <div class="chip-list" v-if="remaining.length">
                     <span class="chip" v-for="s in remaining" :key="s">{{ s }}</span>
                   </div>
@@ -335,15 +292,15 @@
                             <div class="plan-md__dayTitle"><strong>{{ d.header }}</strong><span v-if="d.skillLabel"> — {{ d.skillLabel }}</span></div>
                             <ul class="task-list" @click.stop>
                               <li v-for="(t, idx) in d.tasks" :key="idx">
-                                <input
-                                  class="task-checkbox"
-                                  type="checkbox"
-                                  :checked="t.done"
-                                  @click.stop
-                                  @change.stop="setTaskDone(d.day, idx, $event.target.checked)"
-                                  aria-label="Отметить выполнено"
-                                />
-                                <span class="task-text">{{ t.text }}</span>
+                                <label class="task-label" @click.stop>
+                                  <input
+                                    class="task-checkbox"
+                                    type="checkbox"
+                                    :checked="t.done"
+                                    @change.stop="setTaskDone(d.day, idx, $event.target.checked)"
+                                  />
+                                  <span class="task-text">{{ t.text }}</span>
+                                </label>
                               </li>
                             </ul>
                           </div>
@@ -354,56 +311,39 @@
                   </div>
 
                   <div class="card-link card-link--static">
-                    <div class="card-link__title">Карта навыков</div>
+                    <div class="card-link__titleRow">
+                      <div class="card-link__title">Roadmap</div>
+                      <button class="btn-ghost btn-small" type="button" @click="goRoadmap">Открыть</button>
+                    </div>
                     <div class="card-link__box card-link__box--stack">
-                      <div class="skill-graph" v-if="embeddedGraph">
-                        <svg :viewBox="'0 0 ' + embeddedGraph.width + ' ' + embeddedGraph.height" class="skill-graph__svg" aria-label="Граф навыков" preserveAspectRatio="xMidYMin meet">
-                          <defs>
-                            <marker id="arrow-mini" markerWidth="10" markerHeight="10" refX="6" refY="3" orient="auto" markerUnits="strokeWidth">
-                              <path d="M0,0 L0,6 L6,3 z" class="skill-graph__arrow" />
-                            </marker>
-                          </defs>
-
-                          <line
-                            v-for="e in embeddedGraph.edges"
-                            :key="e.id"
-                            :x1="e.x1"
-                            :y1="e.y1"
-                            :x2="e.x2"
-                            :y2="e.y2"
-                            class="skill-graph__edge"
-                            marker-end="url(#arrow-mini)"
-                          />
-
-                          <g v-for="n in embeddedGraph.nodes" :key="n.id" :transform="'translate(' + n.x + ' ' + n.y + ')'">
-                            <rect
-                              :width="n.w"
-                              :height="n.h"
-                              rx="14"
-                              ry="14"
-                              class="skill-graph__node"
-                              :class="{ 'is-yes': n.status === 'yes', 'is-mid': n.status === 'mid', 'is-no': n.status === 'no' }"
-                            />
-                            <text :x="n.w / 2" :y="n.h / 2 + 5" text-anchor="middle" class="skill-graph__label">{{ n.label }}</text>
-                          </g>
-                        </svg>
-                      </div>
-                      <div class="note" v-else>Карта навыков пока недоступна.</div>
+                      <ul class="rm-summary" v-if="roadmapSections.length">
+                        <li v-for="s in roadmapSections" :key="s.id">
+                          <span class="rm-summary__icon" aria-hidden="true">{{ s.icon }}</span>
+                          <span class="rm-summary__name">{{ s.title }}</span>
+                          <span class="rm-summary__pct">{{ s.percent }}%</span>
+                          <span class="progress-bar rm-summary__bar" role="progressbar" :aria-label="'Изучено: ' + s.title" :aria-valuenow="s.percent" aria-valuemin="0" aria-valuemax="100">
+                            <span class="progress-bar__fill" :style="{ width: s.percent + '%' }"></span>
+                          </span>
+                        </li>
+                      </ul>
+                      <div class="note" v-else>Roadmap пока недоступен.</div>
                     </div>
                   </div>
 
-                  <button class="card-link" type="button" @click="goAI">
-                    <div class="card-link__title">Рекомендации ИИ</div>
-                    <div class="card-link__box">{{ aiRecommendation }}</div>
-                  </button>
+                  <div class="card-link card-link--static">
+                    <div class="card-link__title">Рекомендации</div>
+                    <div class="card-link__box card-link__box--stack">
+                      <p class="rec" v-for="line in recommendation" :key="line">{{ line }}</p>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
 
             <div class="sticky-footer">
-              <div class="bottom-menu">
-                <div class="bottom-menu-label">ИИ ассистент</div>
-                <button class="ai-fab" type="button" @click="goAI" aria-label="Открыть чат с ИИ">ИИ</button>
+              <div class="actions" style="margin:0">
+                <button class="btn btn-primary" type="button" @click="goPlan">Открыть план</button>
+                <button class="btn" type="button" @click="goKnowledge">База знаний</button>
               </div>
             </div>
           </div>

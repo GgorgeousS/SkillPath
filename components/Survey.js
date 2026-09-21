@@ -45,13 +45,14 @@
         const recs = liveRecs.value;
         state.recommended_directions = recs;
         state.selected_direction = Array.isArray(recs) && recs.length ? recs[0] : '';
+        SkillPathStore.logEvent('survey', 'Пройден опрос по интересам (выбрано тем: ' + (state.survey.interests || []).length + ')');
         router.push('/result');
       }
 
       return { SKILL_TAGS, interests, toggle, canNext, next, liveRecs };
     },
     template: `
-      <main class="page">
+      <main class="page" id="main">
         <div class="shell">
           <div class="phone">
             <div class="topbar">
@@ -60,15 +61,17 @@
               <div class="topbar-right" aria-hidden="true">
                 <img
                   class="logo-mini"
-                  src="./assets/skillpathnofone.png"
+                  src="./assets/logo-mark.png"
                   alt=""
-                  onerror="this.onerror=null; this.src='./assets/logo.svg';"
                 />
               </div>
             </div>
             <p class="subtitle">Опрос по интересам — выберите всё, что вам интересно</p>
 
             <div class="content compact">
+              <div class="hint" role="note">
+                <strong>Шаг 1 из 4.</strong> Отметьте всё, что вам интересно (можно несколько). По ответам мы подберём 2–3 направления.
+              </div>
               <div class="list" role="group" aria-label="Навыки и темы">
                 <label v-for="i in SKILL_TAGS" :key="i" class="list-item">
                   <span class="title">{{ i }}</span>
@@ -76,8 +79,8 @@
                 </label>
               </div>
 
-              <div class="note" style="margin-top:12px">
-                <div><strong>Рекомендации:</strong></div>
+              <div class="note" style="margin-top:12px" aria-live="polite">
+                <div><strong>Пока подходят:</strong></div>
                 <div style="margin-top:6px">
                   {{ (liveRecs || []).join(', ') || '—' }}
                 </div>

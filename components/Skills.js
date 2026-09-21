@@ -74,22 +74,6 @@
       const state = SkillPathStore.state;
       const router = VueRouter.useRouter();
 
-      const crmConfigured = Vue.computed(() => SkillPathCRM.isConfigured());
-      const crmHelp = Vue.computed(() => {
-        if (crmConfigured.value) return '';
-        return typeof SkillPathCRM.getConfigHelp === 'function'
-          ? SkillPathCRM.getConfigHelp()
-          : 'CRM не настроен: откройте js/crm.js и укажите CRM_API_BASE_URL и CRM_API_KEY.';
-      });
-
-      const supabaseConfigured = Vue.computed(() => SkillPathSupabase.isConfigured());
-      const supabaseHelp = Vue.computed(() => {
-        if (supabaseConfigured.value) return '';
-        return typeof SkillPathSupabase.getConfigHelp === 'function'
-          ? SkillPathSupabase.getConfigHelp()
-          : 'Supabase не настроен: откройте js/supabase.js и вставьте URL и anon key.';
-      });
-
       const selectedDirection = Vue.computed(
         () => state.selected_direction || (state.recommended_directions || [])[0] || 'Frontend'
       );
@@ -121,142 +105,13 @@
         return SKILLS_BY_DIRECTION[selectedDirection.value] || SKILLS_BY_DIRECTION.Frontend;
       });
 
-      const status = Vue.ref({ type: 'idle', message: '' });
-      const isSubmitting = Vue.ref(false);
-
-      const canSubmit = Vue.computed(() => {
-        const email = (state.profile.email || '').trim();
-        const name = (state.profile.name || '').trim();
-        return email.length > 3 && email.includes('@') && name.length > 1;
-      });
-
-      function payload() {
-        const skillsList = skillsForDirection.value;
-        const skills = {};
-        skillsList.forEach((s) => {
-          const v = state.skills[s.key];
-          skills[s.key] = v === 'no' || v === 'mid' || v === 'yes' ? v : 'no';
-        });
-
-        return {
-          email: (state.profile.email || '').trim(),
-          name: (state.profile.name || '').trim(),
-          persona_type: state.profile.persona_type,
-          answers: {
-            interests: SkillPathUtils.uniqueStrings(state.survey.interests),
-            selected_direction: selectedDirection.value || null,
-          },
-          recommended_directions: SkillPathUtils.uniqueStrings(state.recommended_directions),
-          skills,
-        };
-      }
-
-      function assessmentResult() {
-        const skillsList = skillsForDirection.value;
-        const strengths = skillsList
-          .filter((s) => state.skills[s.key] === 'yes')
-          .map((s) => s.label);
-        const gaps = skillsList
-          .filter((s) => state.skills[s.key] === 'no')
-          .map((s) => s.label);
-        return (
-          'Direction: ' +
-          (selectedDirection.value || '-') +
-          '\nStrengths: ' +
-          (strengths.length ? strengths.join(', ') : '-') +
-          '\nGaps: ' +
-          (gaps.length ? gaps.join(', ') : '-')
-        );
-      }
-
-      function crmPayload() {
-        const sup = payload();
-        return {
-          name: (state.profile.name || '').trim(),
-          last_name: (state.profile.last_name || '').trim(),
-          phone: (state.profile.phone || '').trim(),
-          email: (state.profile.email || '').trim(),
-
-          persona_type: state.profile.persona_type,
-          interests: (sup.answers && sup.answers.interests) || [],
-          skills: sup.skills,
-          recommended_directions: sup.recommended_directions,
-          assessment_result: assessmentResult(),
-          source: 'SkillPath Form',
-          created_at: new Date().toISOString(),
-        };
-      }
-
-      async function submit() {
-        status.value = { type: 'idle', message: '' };
-
-        if (!canSubmit.value) {
-          status.value = {
-            type: 'error',
-            message: 'Заполните email и имя (минимальная проверка).',
-          };
-          return;
-        }
-
-        if (!crmConfigured.value) {
-          status.value = {
-            type: 'error',
-            message: crmHelp.value || 'CRM не настроен (см. js/crm.js).',
-          };
-          return;
-        }
-
-        isSubmitting.value = true;
-        try {
-          const p = payload();
-
-          // >>> Hook up BPMS fetch request here <<<
-          /*
-          try {
-            await fetch('https://YOUR_BPMS_WEBHOOK_URL', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ event: 'new_lead', data: p })
-            });
-          } catch (err) {
-            console.error('BPMS webhook failed:', err);
-          }
-          */
-
-          const crmRes = await SkillPathCRM.createLead(crmPayload());
-          if (crmRes && crmRes.error) {
-            status.value = {
-              type: 'error',
-              message: 'Ошибка CRM: ' + (crmRes.error.message || String(crmRes.error)),
-            };
-            return;
-          }
-
-          let supabaseNote = '';
-          if (supabaseConfigured.value) {
-            const { data, error } = await SkillPathSupabase.insertSubmission(p);
-            if (error) {
-              supabaseNote = ' Supabase: ошибка (' + (error.message || String(error)) + ')';
-            } else {
-              const insertedId = Array.isArray(data) && data[0] && data[0].id ? data[0].id : null;
-              supabaseNote = insertedId ? (' Supabase ID: ' + insertedId) : ' Supabase: ok';
-            }
-          } else {
-            supabaseNote = ' Supabase: не настроен';
-          }
-
-          status.value = {
-            type: 'success',
-            message: 'Отправлено в CRM.' + supabaseNote,
-          };
-        } catch (e) {
-          status.value = { type: 'error', message: e.message || String(e) };
-        } finally {
-          isSubmitting.value = false;
-        }
-      }
-
       function next() {
+        const list = skillsForDirection.value;
+        const known = list.filter((s) => state.skills[s.key] !== 'no').length;
+        SkillPathStore.logEvent(
+          'skills',
+          'Оценка навыков (' + primaryDirectionTitle.value + '): знакомо ' + known + ' из ' + list.length
+        );
         router.push('/roadmap');
       }
 
@@ -264,21 +119,13 @@
         state,
         skillsForDirection,
         LEVELS,
-        status,
-        isSubmitting,
-        canSubmit,
-        submit,
         next,
-        supabaseConfigured,
-        supabaseHelp,
-        crmConfigured,
-        crmHelp,
         primaryDirectionTitle,
         skillsHeroSrc,
       };
     },
     template: `
-      <main class="page">
+      <main class="page" id="main">
         <div class="shell">
           <div class="phone">
             <div class="topbar">
@@ -287,15 +134,17 @@
               <div class="topbar-right" aria-hidden="true">
                 <img
                   class="logo-mini"
-                  src="./assets/skillpathnofone.png"
+                  src="./assets/logo-mark.png"
                   alt=""
-                  onerror="this.onerror=null; this.src='./assets/logo.svg';"
                 />
               </div>
             </div>
             <p class="subtitle">Оценка навыков</p>
 
             <div class="content compact">
+              <div class="hint" role="note">
+                <strong>Шаг 2 из 4.</strong> Честно оцените каждый навык: от этого зависят roadmap и план.
+              </div>
               <div class="split">
                 <div class="panel">
                   <img class="media-img media-img--tall" :src="skillsHeroSrc" alt="" aria-hidden="true" />
@@ -305,7 +154,7 @@
                   </div>
 
                   <div class="list skill-list" role="group" aria-label="Навыки">
-                    <label v-for="s in skillsForDirection" :key="s.key" class="list-item">
+                    <div v-for="s in skillsForDirection" :key="s.key" class="list-item">
                       <span class="title">{{ s.label }}</span>
                       <span class="levels" role="radiogroup" :aria-label="'Уровень: ' + s.label">
                         <label v-for="l in LEVELS" :key="s.key + '-' + l.value" class="level">
@@ -318,64 +167,26 @@
                           <span class="level-label">{{ l.label }}</span>
                         </label>
                       </span>
-                    </label>
+                    </div>
                   </div>
                 </div>
 
                 <div class="panel">
-                  <div class="h2">Данные пользователя</div>
-                  <div class="field">
-                    <div class="label">Email</div>
-                    <input class="input" type="email" v-model="state.profile.email" placeholder="you@example.com" />
-                  </div>
-                  <div class="field">
-                    <div class="label">Имя</div>
-                    <input class="input" type="text" v-model="state.profile.name" placeholder="Ваше имя" />
-                  </div>
-                  <div class="field">
-                    <div class="label">Фамилия</div>
-                    <input class="input" type="text" v-model="state.profile.last_name" placeholder="Ваша фамилия" />
-                  </div>
-                  <div class="field">
-                    <div class="label">Телефон</div>
-                    <input class="input" type="tel" v-model="state.profile.phone" placeholder="+7…" />
-                  </div>
-                  <div class="field">
-                    <div class="label">Persona type</div>
-                    <select class="select" v-model="state.profile.persona_type">
-                      <option value="student">student</option>
-                      <option value="junior">junior</option>
-                      <option value="switcher">switcher</option>
-                    </select>
-                  </div>
-
+                  <div class="h2">Ваш выбор</div>
                   <div class="note" style="margin-top:8px">
-                    <div><strong>Интересы:</strong> {{ (state.survey.interests || []).join(', ') || '—' }}</div>
+                    <div><strong>Направление:</strong> {{ primaryDirectionTitle }}</div>
+                    <div style="margin-top:6px"><strong>Интересы:</strong> {{ (state.survey.interests || []).join(', ') || '—' }}</div>
                     <div style="margin-top:6px"><strong>Рекомендации:</strong> {{ (state.recommended_directions || []).join(', ') || '—' }}</div>
                   </div>
-
-                  <div v-if="status.type !== 'idle'" class="note" :class="status.type">
-                    {{ status.message }}
-                  </div>
-
-                  <div class="note" v-if="!crmConfigured">
-                    {{ crmHelp || 'CRM не настроен: откройте js/crm.js и укажите CRM_API_BASE_URL и CRM_API_KEY.' }}
-                  </div>
-
-                  <div class="note" v-if="!supabaseConfigured">
-                    {{ supabaseHelp || 'Supabase не настроен: откройте js/supabase.js и вставьте URL и anon key.' }}
-                  </div>
+                  <p class="small" style="margin-top:12px">
+                    Ответы сохраняются в вашем личном кабинете автоматически. На следующем шаге вы увидите roadmap с темами.
+                  </p>
                 </div>
               </div>
             </div>
 
             <div class="sticky-footer">
-              <div class="actions" style="margin:0">
-                <button class="btn btn-primary" type="button" @click="next">Далее</button>
-                <button class="btn" :disabled="!canSubmit || isSubmitting" @click="submit">
-                  {{ isSubmitting ? 'Отправка…' : 'Отправить' }}
-                </button>
-              </div>
+              <button class="btn btn-primary" type="button" @click="next">Далее</button>
             </div>
           </div>
         </div>
