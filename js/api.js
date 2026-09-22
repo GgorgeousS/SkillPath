@@ -7,7 +7,7 @@
   // Локально сайт работает с API на этом же компьютере. На размещённом сайте (Vercel и т. п.) используется
   // PRODUCTION_API_URL: впишите сюда https-адрес развёрнутого API (например, https://skillpath-api.onrender.com).
   const LOCAL_API_URL = 'http://127.0.0.1:8081';
-  const PRODUCTION_API_URL = '';
+  const PRODUCTION_API_URL = 'https://skillpath-api-71t6.onrender.com';
   const LS_BASE_URL_KEY = 'skillpath_api_base_url';
   const LS_TOKEN_KEY = 'skillpath_token';
 
