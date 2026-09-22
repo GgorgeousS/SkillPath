@@ -78,6 +78,17 @@ html[data-theme="dark"] .tabs__tab.is-active{background:linear-gradient(100deg,#
 html[data-theme="dark"] .link-btn{color:#F897FE}
 html[data-theme="dark"] .cab-sync.is-error{color:#FFB4B4}
 
+/* auth: левая карточка в тех же розово-фиолетовых тонах, что и основная кнопка/навигация в тёмной теме */
+html[data-theme="dark"] .auth__aside{
+  background:linear-gradient(135deg,#F897FE,#935AF0);
+  color:#03042C;
+  box-shadow:0 20px 50px rgba(147,90,240,.35);
+}
+html[data-theme="dark"] .auth__perk-icon{background:rgba(3,4,44,.16)}
+html[data-theme="dark"] .auth__aside::before,
+html[data-theme="dark"] .auth__aside::after{background:rgba(3,4,44,.10)}
+html[data-theme="dark"] .input-icon__toggle:hover{background:rgba(255,255,255,.08)}
+
 /* основная кнопка: как на лендинге — розово-фиолетовый градиент и тёмный текст */
 html[data-theme="dark"] .btn-primary,
 html[data-theme="dark"] a.btn.btn-primary{background:linear-gradient(100deg,#F897FE,#935AF0);color:#03042C}

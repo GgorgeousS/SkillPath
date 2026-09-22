@@ -98,12 +98,15 @@
 
             <div class="content compact">
               <div class="auth">
-                <aside class="auth__aside panel">
-                  <h2 class="h2">Зачем нужен аккаунт</h2>
-                  <ul class="auth__perks">
-                    <li v-for="p in PERKS" :key="p">{{ p }}</li>
-                  </ul>
-                  <p class="small">Пароль хранится на сервере только в зашифрованном виде.</p>
+                <aside class="auth__aside">
+                  <div class="auth__aside-inner">
+                    <span class="auth__kicker">SkillPath</span>
+                    <h2 class="auth__headline">Ваш путь в IT — <span>под вашим контролем</span></h2>
+                    <ul class="auth__perks">
+                      <li v-for="p in PERKS" :key="p"><span class="auth__perk-icon" aria-hidden="true">✓</span>{{ p }}</li>
+                    </ul>
+                    <p class="auth__note">🔒 Пароль хранится на сервере только в зашифрованном виде.</p>
+                  </div>
                 </aside>
 
                 <section class="auth__card panel" aria-labelledby="auth-title">
@@ -117,32 +120,53 @@
                   <form @submit.prevent="submit" novalidate>
                     <div class="field" v-if="isRegister">
                       <label class="label" for="a-name">Имя</label>
-                      <input id="a-name" class="input" type="text" autocomplete="given-name" v-model="form.name" />
+                      <div class="input-icon">
+                        <span class="input-icon__icon" aria-hidden="true">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7" r="4"></circle><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"></path></svg>
+                        </span>
+                        <input id="a-name" class="input" type="text" autocomplete="given-name" v-model="form.name" />
+                      </div>
                     </div>
                     <div class="field">
                       <label class="label" for="a-email">Email</label>
-                      <input id="a-email" class="input" type="email" autocomplete="email" v-model="form.email" placeholder="you@example.com" />
+                      <div class="input-icon">
+                        <span class="input-icon__icon" aria-hidden="true">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="m2 7 10 6 10-6"></path></svg>
+                        </span>
+                        <input id="a-email" class="input" type="email" autocomplete="email" v-model="form.email" placeholder="you@example.com" />
+                      </div>
                     </div>
                     <div class="field">
                       <label class="label" for="a-pass">Пароль</label>
-                      <input
-                        id="a-pass"
-                        class="input"
-                        :type="showPassword ? 'text' : 'password'"
-                        :autocomplete="isRegister ? 'new-password' : 'current-password'"
-                        v-model="form.password"
-                        :aria-describedby="isRegister ? 'a-pass-hint' : null"
-                      />
+                      <div class="input-icon">
+                        <span class="input-icon__icon" aria-hidden="true">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                        </span>
+                        <input
+                          id="a-pass"
+                          class="input"
+                          :type="showPassword ? 'text' : 'password'"
+                          :autocomplete="isRegister ? 'new-password' : 'current-password'"
+                          v-model="form.password"
+                          :aria-describedby="isRegister ? 'a-pass-hint' : null"
+                        />
+                        <button type="button" class="input-icon__toggle" @click="showPassword = !showPassword" :aria-pressed="showPassword" :aria-label="showPassword ? 'Скрыть пароль' : 'Показать пароль'">
+                          <svg v-if="!showPassword" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7Z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                          <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0 1 12 19c-7 0-11-7-11-7a21.8 21.8 0 0 1 5.06-5.94M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 7 11 7a21.8 21.8 0 0 1-2.16 3.19M14.12 14.12a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+                        </button>
+                      </div>
                       <span class="small" id="a-pass-hint" v-if="isRegister">Не меньше 8 символов.</span>
                     </div>
-                    <label class="auth__show">
-                      <input type="checkbox" v-model="showPassword" /> Показать пароль
-                    </label>
                     <div class="field" v-if="isRegister">
                       <label class="label" for="a-persona">Кто вы</label>
-                      <select id="a-persona" class="select" v-model="form.persona_type">
-                        <option v-for="p in PERSONAS" :key="p.value" :value="p.value">{{ p.label }}</option>
-                      </select>
+                      <div class="input-icon">
+                        <span class="input-icon__icon" aria-hidden="true">
+                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="13" rx="2"></rect><path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        </span>
+                        <select id="a-persona" class="select" v-model="form.persona_type">
+                          <option v-for="p in PERSONAS" :key="p.value" :value="p.value">{{ p.label }}</option>
+                        </select>
+                      </div>
                     </div>
 
                     <div v-if="error" class="note error" role="alert">{{ error }}</div>
