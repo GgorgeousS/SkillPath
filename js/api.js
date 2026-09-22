@@ -1,12 +1,20 @@
 (function () {
   'use strict';
 
-  // REST API SkillPath (папка ./api, FastAPI + PostgreSQL).
+  // REST API SkillPath (папка ./backend, FastAPI + PostgreSQL).
   // Браузер не подключается к БД напрямую: данные принимает API и сохраняет в PostgreSQL.
-  // Для production укажите адрес развёрнутого API (только https) либо задайте его через localStorage.
-  const API_BASE_URL = 'http://127.0.0.1:8081';
+  // Адрес можно переопределить без правки файла: localStorage.setItem('skillpath_api_base_url', 'https://...').
+  // Локально сайт работает с API на этом же компьютере. На размещённом сайте (Vercel и т. п.) используется
+  // PRODUCTION_API_URL: впишите сюда https-адрес развёрнутого API (например, https://skillpath-api.onrender.com).
+  const LOCAL_API_URL = 'http://127.0.0.1:8081';
+  const PRODUCTION_API_URL = '';
   const LS_BASE_URL_KEY = 'skillpath_api_base_url';
   const LS_TOKEN_KEY = 'skillpath_token';
+
+  function defaultBaseUrl() {
+    const host = window.location.hostname;
+    return host === 'localhost' || host === '127.0.0.1' ? LOCAL_API_URL : PRODUCTION_API_URL;
+  }
 
   function baseUrl() {
     let override = '';
@@ -15,7 +23,7 @@
     } catch (_) {
       override = '';
     }
-    return String(override || API_BASE_URL || '').trim().replace(/\/$/, '');
+    return String(override || defaultBaseUrl() || '').trim().replace(/\/$/, '');
   }
 
   function isLocal(base) {
@@ -29,7 +37,7 @@
 
   function getConfigHelp() {
     const base = baseUrl();
-    if (!base) return 'Адрес API не задан: укажите API_BASE_URL в js/api.js.';
+    if (!base) return 'Адрес API не задан: впишите PRODUCTION_API_URL в js/api.js.';
     if (!base.startsWith('https://') && !isLocal(base)) {
       return 'Для production нужен HTTPS-адрес API (http допустим только для localhost).';
     }

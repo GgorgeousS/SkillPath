@@ -5,7 +5,7 @@ __pycache__/
 
 # Env files
 .env
-api/.env
+backend/.env
 
 
 # Node

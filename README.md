@@ -31,7 +31,7 @@ SkillPath — веб-сервис для студентов и начинающ�
 ## Архитектура
 
 ```
-Браузер (Vue 3, статический сайт) ──REST/JSON──▶ API (FastAPI, папка api/) ──SQL──▶ PostgreSQL
+Браузер (Vue 3, статический сайт) ──REST/JSON──▶ API (FastAPI, папка backend/) ──SQL──▶ PostgreSQL
 ```
 
 Браузер не подключается к PostgreSQL напрямую: строка подключения содержит пароль, а в статическом сайте её увидел бы любой посетитель. Поэтому данные принимает API и сохраняет их в БД.
@@ -47,7 +47,8 @@ components/           экраны и компоненты Vue (Onboarding, Auth
                       Roadmap, RoadmapTimeline, Plan, Progress, Profile, Knowledge, Support)
 css/                  styles.css (основные стили), landing.css (лендинг), dark.css (тёмная тема)
 assets/               логотип и иллюстрации
-api/                  main.py (FastAPI), schema.sql (схема БД), requirements.txt, .env.example
+backend/              main.py (FastAPI), schema.sql (схема БД), requirements.txt, .env.example
+render.yaml           конфигурация хостинга API на Render
 docker-compose.yml    локальный PostgreSQL для разработки
 ```
 
@@ -68,7 +69,7 @@ docker-compose.yml    локальный PostgreSQL для разработки
 
 ### База данных
 
-Схема: [api/schema.sql](api/schema.sql). Таблицы `users`, `sessions`, `user_state`, `feedback` создаются автоматически при старте API.
+Схема: [backend/schema.sql](backend/schema.sql). Таблицы `users`, `sessions`, `user_state`, `feedback` создаются автоматически при старте API.
 
 ### Аккаунты и безопасность
 
@@ -76,7 +77,7 @@ docker-compose.yml    локальный PostgreSQL для разработки
 - Пароль хранится только как хеш PBKDF2-SHA256 (600 000 итераций, случайная соль). В БД лежит SHA-256 от токена сессии, а не сам токен. Сессия действует 30 дней.
 - Вход ограничен по числу попыток (8 за 10 минут на пару IP + email), ответ при неверном логине или пароле одинаковый. Регистраций с одного IP — не больше `REGISTER_LIMIT_PER_HOUR` в час (по умолчанию 20).
 - В браузере хранятся только токен сессии и выбранная тема; данные пользователя живут в PostgreSQL.
-- Для production обязательно: HTTPS и список `ALLOWED_ORIGINS` в `api/.env`.
+- Для production обязательно: HTTPS и список `ALLOWED_ORIGINS` в `backend/.env`.
 
 ## Запуск локально
 
@@ -101,11 +102,11 @@ docker compose up -d
 ```
 python -m venv .venv
 .venv\Scripts\activate
-pip install -r api/requirements.txt
-copy api\.env.example api\.env
+pip install -r backend/requirements.txt
+copy backend\.env.example backend\.env
 ```
 
-Откройте `api/.env` и при необходимости поправьте значения:
+Откройте `backend/.env` и при необходимости поправьте значения:
 
 | Переменная | Назначение |
 |---|---|
@@ -116,7 +117,7 @@ copy api\.env.example api\.env
 Запуск:
 
 ```
-uvicorn api.main:app --host 127.0.0.1 --port 8081
+uvicorn backend.main:app --host 127.0.0.1 --port 8081
 ```
 
 Проверка: `http://127.0.0.1:8081/health` → `{"status":"ok"}`.
@@ -129,7 +130,7 @@ uvicorn api.main:app --host 127.0.0.1 --port 8081
 python -m http.server 5173
 ```
 
-Откройте `http://127.0.0.1:5173`. Адрес API задан в [js/api.js](js/api.js) (`API_BASE_URL`); его можно переопределить без правки файла:
+Откройте `http://127.0.0.1:5173`. Локально сайт обращается к API на `http://127.0.0.1:8081` (`LOCAL_API_URL` в [js/api.js](js/api.js)); адрес можно переопределить без правки файла:
 
 ```js
 localStorage.setItem('skillpath_api_base_url', 'https://api.example.com')
@@ -139,6 +140,10 @@ localStorage.setItem('skillpath_api_base_url', 'https://api.example.com')
 
 ## Развёртывание
 
-- **Фронтенд** — любой статический хостинг (Vercel, GitHub Pages). Конфигурация для Vercel: [vercel.json](vercel.json).
-- **API** — любой хостинг Python (Render, Railway, VPS) с переменными окружения `DATABASE_URL` и `ALLOWED_ORIGINS` (адрес вашего фронтенда). Управляемый PostgreSQL (в том числе Supabase как обычный Postgres-хостинг) подключается только через `DATABASE_URL`.
-- В [js/api.js](js/api.js) укажите https-адрес развёрнутого API: с адресом по умолчанию (`127.0.0.1`) размещённый сайт работать не будет.
+Сайт состоит из двух частей, и **обе нужно разместить**: без API на размещённом сайте не заработают вход и регистрация.
+
+1. **База данных PostgreSQL.** Подойдёт любой управляемый Postgres, например [Neon](https://neon.tech) или ваш проект Supabase (как обычный Postgres). Нужна строка подключения (`DATABASE_URL`). Для Supabase берите строку из раздела Connect → **Session pooler**. Таблицы создаются автоматически при первом запуске API, доступ через публичный REST Supabase закрывается (RLS включён в [схеме](backend/schema.sql)).
+2. **API** — папка [backend/](backend/) на любом Python-хостинге. Для Render в репозитории есть [render.yaml](render.yaml): New → Blueprint → выберите репозиторий и задайте переменные окружения `DATABASE_URL` и `ALLOWED_ORIGINS` (адрес сайта на Vercel, без слеша в конце). Проверка после запуска: `https://<адрес-api>/health` → `{"status":"ok"}`.
+3. **Сайт** — статические файлы из корня репозитория (Vercel, GitHub Pages). Конфигурация Vercel: [vercel.json](vercel.json), серверная часть исключена из выкладки через [.vercelignore](.vercelignore). Впишите https-адрес API в `PRODUCTION_API_URL` в [js/api.js](js/api.js) и отправьте изменения в GitHub: Vercel обновит сайт автоматически.
+
+Бесплатные тарифы хостингов могут «засыпать» без запросов: первый вход после паузы иногда занимает около минуты.

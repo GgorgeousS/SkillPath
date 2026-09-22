@@ -151,7 +151,7 @@
               <div class="lp-glass lp-stat">
                 <span class="lp-stat__num">4 шага</span>
                 <span class="lp-stat__text">до персонального карьерного плана</span>
-                <div class="lp-chips">
+                <div class="lp-chips lp-chips--left">
                   <span>Направление</span><span>Навыки</span><span>План</span><span>Прогресс</span>
                 </div>
                 <button class="lp-btn lp-btn--primary lp-btn--block" type="button" @click="start">Начать</button>

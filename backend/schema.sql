@@ -37,3 +37,10 @@ CREATE TABLE IF NOT EXISTS feedback (
 );
 ALTER TABLE feedback ADD COLUMN IF NOT EXISTS user_id BIGINT REFERENCES users(id) ON DELETE SET NULL;
 CREATE INDEX IF NOT EXISTS feedback_created_at_idx ON feedback (created_at DESC);
+
+-- Если БД размещена в Supabase, таблицы схемы public доступны через его REST API по публичному ключу.
+-- Включаем RLS без политик: работать с таблицами может только владелец (наш API), анонимный доступ закрыт.
+ALTER TABLE users      ENABLE ROW LEVEL SECURITY;
+ALTER TABLE sessions   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE user_state ENABLE ROW LEVEL SECURITY;
+ALTER TABLE feedback   ENABLE ROW LEVEL SECURITY;

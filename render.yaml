@@ -1,0 +1,17 @@
+# Blueprint для хостинга API на Render (https://render.com). База данных подключается через DATABASE_URL.
+services:
+  - type: web
+    name: skillpath-api
+    runtime: python
+    rootDir: backend
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: DATABASE_URL
+        sync: false # значение вводится в панели Render (строка подключения к PostgreSQL)
+      - key: ALLOWED_ORIGINS
+        sync: false # адрес сайта на Vercel, например https://skill-path.vercel.app

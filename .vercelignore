@@ -1,0 +1,5 @@
+# Серверная часть размещается отдельно (см. README), на Vercel выкладывается только статический сайт.
+backend
+docker-compose.yml
+render.yaml
+REPORT_TRACK_B_CRM.md
