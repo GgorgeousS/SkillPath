@@ -473,7 +473,7 @@ input[type="radio"]{
 
 /* Desktop: no "frames" / visible borders */
 @media (min-width: 521px){
-  .phone{border:0;box-shadow:none;background:transparent}
+  .phone{border:0;box-shadow:none;background:transparent;overflow:visible}
   .topbar{padding-left:0;padding-right:0}
   .hero-img{width:100%;margin:0 0 16px;border-radius:18px;height:240px}
   .content{background:transparent;border-radius:0;box-shadow:none;padding:18px 0 26px}
@@ -786,7 +786,9 @@ a.btn{display:inline-block;text-decoration:none;text-align:center}
   padding:36px 30px;
   color:#fff;
   background:linear-gradient(135deg, var(--accentA), var(--accentB));
-  box-shadow:0 20px 50px rgba(76,60,200,.28);
+  /* box-shadow игнорируется тем же overflow:hidden, что обрезает декоративные круги ниже —
+     поэтому тень через filter, её overflow элемента не обрезает */
+  filter:drop-shadow(0 16px 32px rgba(76,60,200,.30));
   display:flex;
 }
 .auth__aside::before,
